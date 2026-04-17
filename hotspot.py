@@ -189,7 +189,7 @@ def fetch_api_requests(url):
 @st.cache_data(ttl=300)
 def get_weibo_hot():
     data=[]
-    if PLAYWRIGHT_AVAILABLE:
+    if True:
         html,info=fetch_page_content("https://s.weibo.com/top/summary",".td-02")
         if html:
             try:
@@ -218,7 +218,7 @@ def get_weibo_hot():
 @st.cache_data(ttl=300)
 def get_douyin_hot():
     data=[]
-    if PLAYWRIGHT_AVAILABLE:
+    if True:
         html,info=fetch_page_content("https://tophub.today/n/K7GdaMgdQy","table")
         if html:
             try:
@@ -248,7 +248,7 @@ def get_douyin_hot():
 @st.cache_data(ttl=300)
 def get_xhs_hot():
     data=[]
-    if PLAYWRIGHT_AVAILABLE:
+    if True:
         html,info=fetch_page_content("https://tophub.today/n/Jb0vmloB1G","table")
         if html:
             try:
@@ -277,7 +277,7 @@ def get_xhs_hot():
 @st.cache_data(ttl=300)
 def get_zhihu_hot():
     data=[]
-    if PLAYWRIGHT_AVAILABLE:
+    if True:
         html,info=fetch_page_content("https://tophub.today/n/mproPpoq6O","table")
         if html:
             try:
