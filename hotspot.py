@@ -146,7 +146,18 @@ def parse_hot_value(hot_str):
 # 引擎
 # ================================================================
 def fetch_page_content(url, selector_to_wait=None, timeout=20):
-    if not PLAYWRIGHT_AVAILABLE: return None,"No Lib"
+    if not PLAYWRIGHT_AVAILABLE:
+        try:
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+            if "weibo.com" in url:
+                headers["Cookie"] = "SUB=_2AkMSWd50f8NxqwJRmP0SzGjnaYt2zQvEieKnWqM7JRMxHRl-yT9kqmFAtRB6PYC00XUo_oIeFok08G61yWnE2Yv2gqB9;"
+            resp = requests.get(url, headers=headers, timeout=timeout, verify=False)
+            if resp.status_code == 200:
+                resp.encoding = 'utf-8'
+                return resp.text, "Req-Fallback"
+            return None, f"HTTP {resp.status_code}"
+        except Exception as e:
+            return None, str(e)
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True, args=['--no-sandbox'])
