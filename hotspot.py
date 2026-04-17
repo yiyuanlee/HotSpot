@@ -84,7 +84,7 @@ def save_snapshot(platform_key, data):
                  item.get('hot',''), item.get('engine',''), item.get('link','')))
             conn.execute("""INSERT INTO topics (platform,title,last_seen,peak_rank,total_appearances)
                 VALUES (?,?,?,?,1) ON CONFLICT(platform,title) DO UPDATE SET
-                last_seen=excluded.last_seen, peak_rank=MIN(peak_rank,excluded.rank),
+                last_seen=excluded.last_seen, peak_rank=MIN(peak_rank,excluded.peak_rank),
                 total_appearances=total_appearances+1""",
                 (platform_key, item['title'], now, item['rank']))
 
@@ -404,9 +404,9 @@ with st.sidebar:
 
     st.divider()
     st.subheader("📊 视图模式")
-    view_mode = st.radio("切换视图", ["realtime","history"],
-                         labels=["⚡ 实时热搜","📈 历史趋势"],
-                         horizontal=True, index=0 if st.session_state.view_mode=="realtime" else 1)
+    view_mode = st.radio("切换视图", ["realtime", "history"],
+                         format_func=lambda x: "⚡ 实时热搜" if x == "realtime" else "📈 历史趋势",
+                         horizontal=True, index=0 if st.session_state.view_mode == "realtime" else 1)
     st.session_state.view_mode = view_mode
 
     st.divider()
