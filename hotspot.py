@@ -82,18 +82,11 @@ def save_snapshot(platform_key, data):
                 VALUES (?,?,?,?,?,?,?)""",
                 (now, platform_key, item['rank'], item['title'],
                  item.get('hot',''), item.get('engine',''), item.get('link','')))
-            # Upsert with SELECT + INSERT/UPDATE (SQLite compatible)
-            cur = conn.execute("SELECT peak_rank,total_appearances FROM topics WHERE platform=? AND title=?",
-                              (platform_key, item['title']))
-            row = cur.fetchone()
-            if row:
-                new_peak = min(row[0], item['rank'])
-                new_count = row[1] + 1
-                conn.execute("UPDATE topics SET last_seen=?, peak_rank=?, total_appearances=? WHERE platform=? AND title=?",
-                            (now, new_peak, new_count, platform_key, item['title']))
-            else:
-                conn.execute("INSERT INTO topics (platform,title,last_seen,peak_rank,total_appearances) VALUES (?,?,?,?,1)",
-                            (platform_key, item['title'], now, item['rank']))
+            conn.execute("""INSERT INTO topics (platform,title,last_seen,peak_rank,total_appearances)
+                VALUES (?,?,?,?,1) ON CONFLICT(platform,title) DO UPDATE SET
+                last_seen=excluded.last_seen, peak_rank=MIN(peak_rank,excluded.rank),
+                total_appearances=total_appearances+1""",
+                (platform_key, item['title'], now, item['rank']))
 
 def clean_old_snapshots(days=7):
     cutoff = datetime.now() - timedelta(days=days)
@@ -392,11 +385,9 @@ with st.sidebar:
 
     st.divider()
     st.subheader("📊 视图模式")
-    view_mode = st.radio("切换视图",
-                         options=["realtime","history"],
-                         format_func=lambda x: "⚡ 实时热搜" if x=="realtime" else "📈 历史趋势",
-                         horizontal=True,
-                         index=0 if st.session_state.view_mode=="realtime" else 1)
+    view_mode = st.radio("切换视图", ["realtime","history"],
+                         labels=["⚡ 实时热搜","📈 历史趋势"],
+                         horizontal=True, index=0 if st.session_state.view_mode=="realtime" else 1)
     st.session_state.view_mode = view_mode
 
     st.divider()
@@ -424,8 +415,8 @@ if st.session_state.view_mode == "realtime":
     for col,(key,title,css_cls,platform_key,func) in zip(cols,PLATFORMS):
         bar_color=hot_bar_colors[platform_key]
         with col:
-            st.markdown(f'<div class="col-wrap">', unsafe_allow_html=True)
-            st.markdown(f'<div class="source-header {css_cls}">{title}</div>', unsafe_allow_html=True)
+            html_content = f'<div class="col-wrap">'
+            html_content += f'<div class="source-header {css_cls}">{title}</div>'
             data=func()
             if data:
                 for item in data:
@@ -437,7 +428,7 @@ if st.session_state.view_mode == "realtime":
                     title_text=item.get('title','')
                     hot_str=item.get('hot','')
                     hot_pct=parse_hot_value(hot_str)
-                    st.markdown(f"""
+                    html_content += f"""
                     <div class="row-item">
                         <span class="rank-badge {rank_cls}">{rank}</span>
                         <a href="{link}" target="_blank">{title_text}</a>
@@ -446,10 +437,11 @@ if st.session_state.view_mode == "realtime":
                             <div class="hot-bar-bg"><div class="hot-bar-fill" style="width:{hot_pct}%;background:{bar_color};"></div></div>
                             <span class="hot-text">{hot_str}</span>
                         </div>
-                    </div>""", unsafe_allow_html=True)
+                    </div>"""
             else:
-                st.markdown('<div class="empty-msg">暂无数据</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+                html_content += '<div class="empty-msg">暂无数据</div>'
+            html_content += '</div>'
+            st.markdown(html_content, unsafe_allow_html=True)
 
 # ================================================================
 # 历史趋势视图
