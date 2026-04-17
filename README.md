@@ -1,136 +1,129 @@
-# 🔥 HotSpot v3.6 - 全网热搜聚合器
+# 🔥 HotSpot v4.1 - 全网热搜聚合器
 
-HotSpot 是一个 **实时全网热搜聚合器**，使用 **Streamlit** 构建，可展示微博、B站、抖音、小红书等平台的热门内容。
-v3.6 新增小红书热搜功能，并支持 **Playwright 视觉爬虫** 与 **API 数据抓取**。
-
----
-
-## 🚀 功能特色
-
-* **多平台热搜聚合**：
-
-  * 微博热搜（微博网页端 + 微博移动端 API）
-  * Bilibili 热搜（官方 API）
-  * 抖音热榜（Tophub 视觉解析 + TenAPI 备用 API）
-  * 小红书热搜（Tophub 视觉解析 + TenAPI 备用 API）
-
-* **多引擎支持**：
-
-  * **视觉爬虫**（Playwright）
-  * **API 请求**（requests）
-
-* **实时刷新**：
-
-  * 默认缓存 5 分钟 (`st.cache_data(ttl=300)`)
-  * 支持手动刷新按钮
-
-* **日志追踪**：
-
-  * 显示抓取状态、成功与失败信息
-  * Playwright 状态提示
-
-* **UI 优化**：
-
-  * 四列布局，支持微博/B站/抖音/小红书同时显示
-  * 热搜标题、排名、热度值、抓取引擎标识
-  * 响应式设计，适配小屏幕
+HotSpot 是一个 **实时全网热搜聚合器**，使用 **Streamlit** 构建，支持微博、B站、抖音、小红书、知乎五大平台，并提供 **历史趋势分析**。
 
 ---
 
-## ⚙️ 技术栈
+## ✨ 功能特色
 
-* Python 3.9+
-* [Streamlit](https://streamlit.io/)
-* [Playwright](https://playwright.dev/python/)（可选，支持视觉抓取）
-* [Requests](https://docs.python-requests.org/)
-* [BeautifulSoup4](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)
+### 实时热搜
+- 🔴 微博热搜 · 📺 B站热搜 · 🎵 抖音热榜 · 📕 小红书热搜 · 🔵 知乎热搜
+- 每条热搜显示**排名**、**热度值**、**抓取引擎标识**
+- 热度进度条直观展示热度对比
+- 排名前 3 名高亮标识
+
+### 历史趋势 📈（v4.0+ 新增）
+- 每次抓取自动存入本地 SQLite 数据库
+- 查看任意话题在任意平台的历史上榜轨迹
+- 热门话题排行榜（按上榜次数 / 巅峰排名排序）
+- 折线图展示话题排名变化趋势
+- 支持 1 / 3 / 7 / 14 天时间范围筛选
+
+### UI 体验（v4.0+ 优化）
+- 🌙 **深色模式**（侧边栏一键切换）
+- 四列卡片布局，每列独立圆角卡片 + 平台品牌色标题
+- 响应式设计，适配不同屏幕尺寸
+
+### 多引擎兜底
+- **视觉爬虫**（Playwright）优先，成功率更高
+- **API 请求**（requests）兜底，极速响应
+- 引擎标签：`Vis-PW` / `Vis-Hub` / `API`
 
 ---
 
-## 📦 安装依赖
+## 🚀 快速开始
 
 ```bash
-pip install streamlit requests beautifulsoup4
-pip install playwright
-playwright install
+git clone https://github.com/yiyuanlee/HotSpot.git
+cd HotSpot
+pip install streamlit requests beautifulsoup4 matplotlib pandas
+streamlit run hotspot.py
 ```
 
-> Playwright 仅在需要视觉抓取时使用，如果仅依赖 API，可跳过。
+> Playwright 可选（支持视觉抓取）：
+> ```bash
+> pip install playwright
+> playwright install
+> ```
 
 ---
 
-## 💻 运行项目
+## 📂 项目结构
 
-在项目根目录下运行：
-
-```bash
-streamlit run app.py
+```
+HotSpot/
+├── hotspot.py          # 主程序（v4.1）
+├── hotspot_history.db  # SQLite 历史数据库（运行后自动生成）
+├── README.md
+└── start.py            # 启动脚本
 ```
 
-* 页面默认显示四列热搜列表：
+---
 
-  * 🔴 微博热搜
-  * 📺 Bilibili
-  * 🎵 抖音热榜
-  * 📕 小红书
-* 侧边栏可查看日志和手动刷新数据。
+## 🖥️ 使用说明
+
+### 视图切换
+侧边栏提供两种视图：
+
+| 视图 | 说明 |
+|------|------|
+| ⚡ 实时热搜 | 当前各平台实时热搜榜 |
+| 📈 历史趋势 | 话题历史轨迹、热门话题排行、趋势折线图 |
+
+### 侧边栏功能
+- 🌙 深色模式开关
+- 📊 视图切换
+- 🔄 立即刷新（清空缓存重新抓取）
+- 📋 日志面板
+
+### 引擎标签
+| 标签 | 含义 |
+|------|------|
+| `Vis-PW` | Playwright 视觉爬虫 |
+| `Vis-Hub` | Tophub 视觉解析 |
+| `API` | API 请求直接抓取 |
+| `API-Mob` | 微博移动端 API |
 
 ---
 
-## 📝 日志与调试
+## 🛠️ 技术栈
 
-* 日志显示每个抓取模块的状态：
-
-  * **绿色**：成功抓取
-  * **红色**：抓取失败或异常
-  * **蓝色**：信息性日志
-* Playwright 可选，可显示 `✅ Ready` 或 `❌ Missing` 状态
-
----
-
-## ⚡ 使用说明
-
-* **缓存机制**：默认每 5 分钟刷新一次热搜数据
-* **手动刷新**：点击侧边栏 “立即刷新” 按钮即可清空缓存并重新抓取
-* **引擎标签**：
-
-  * `Vis-PW`：Playwright 视觉抓取
-  * `Vis-Hub`：Tophub 视觉抓取
-  * `API`：API 请求抓取
+- **Python 3.9+**
+- [Streamlit](https://streamlit.io/) — Web UI
+- [SQLite](https://docs.python.org/3/library/sqlite3.html) — 历史数据存储（Python 内置）
+- [Matplotlib](https://matplotlib.org/) — 趋势图绘制
+- [Pandas](https://pandas.pydata.org/) — 数据表格
+- [Playwright](https://playwright.dev/python/)（可选）
+- [BeautifulSoup4](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) — HTML 解析
+- [Requests](https://docs.python-requests.org/) — HTTP 请求
 
 ---
 
-## 🔗 链接示例
+## ⚠️ 注意事项
 
-* 微博热搜：[https://s.weibo.com/top/summary](https://s.weibo.com/top/summary)
-* 小红书搜索链接示例：[https://www.xiaohongshu.com/search_result?keyword=关键词&source=web_search_result_notes](https://www.xiaohongshu.com/search_result?keyword=关键词&source=web_search_result_notes)
-* Bilibili 热搜：[https://search.bilibili.com/all?keyword=关键词](https://search.bilibili.com/all?keyword=关键词)
-* 抖音搜索：[https://www.douyin.com/search/关键词](https://www.douyin.com/search/关键词)
-
----
-
-## 📌 注意事项
-
-1. Playwright 在 Windows 系统需设置：
-
-```python
-import asyncio
-asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-```
-
-2. 关闭 HTTPS 警告：
-
-```python
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-```
-
-3. 对于视觉抓取失败，可使用备用 API 数据源（TenAPI）。
+1. Windows 系统运行 Playwright 需设置：
+   ```python
+   import asyncio
+   asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+   ```
+2. 数据源来自各平台公开接口，部分平台可能存在访问限制
+3. 历史趋势数据需要运行一段时间后才会丰富（每小时自动快照）
 
 ---
 
-## 🎯 未来计划
+## 📌 版本历史
 
-* 增加更多平台支持（知乎、贴吧等）
-* 增加排序与筛选功能
-* 增加历史趋势可视化
+| 版本 | 更新内容 |
+|------|----------|
+| v4.1 | 历史趋势视图、SQLite 持久化、热门话题统计表、趋势折线图 |
+| v4.0 | 深色模式、卡片布局、热度进度条、排名徽章、知乎支持 |
+| v3.6 | 小红书热搜、Playwright 视觉爬虫 |
+
+---
+
+## 🔗 相关链接
+
+- 微博热搜：https://s.weibo.com/top/summary
+- 小红书搜索：https://www.xiaohongshu.com
+- B站搜索：https://search.bilibili.com
+- 抖音搜索：https://www.douyin.com
