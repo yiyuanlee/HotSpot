@@ -82,11 +82,18 @@ def save_snapshot(platform_key, data):
                 VALUES (?,?,?,?,?,?,?)""",
                 (now, platform_key, item['rank'], item['title'],
                  item.get('hot',''), item.get('engine',''), item.get('link','')))
-            conn.execute("""INSERT INTO topics (platform,title,last_seen,peak_rank,total_appearances)
-                VALUES (?,?,?,?,1) ON CONFLICT(platform,title) DO UPDATE SET
-                last_seen=excluded.last_seen, peak_rank=MIN(peak_rank,excluded.rank),
-                total_appearances=total_appearances+1""",
-                (platform_key, item['title'], now, item['rank']))
+            # Upsert with SELECT + INSERT/UPDATE (SQLite compatible)
+            cur = conn.execute("SELECT peak_rank,total_appearances FROM topics WHERE platform=? AND title=?",
+                              (platform_key, item['title']))
+            row = cur.fetchone()
+            if row:
+                new_peak = min(row[0], item['rank'])
+                new_count = row[1] + 1
+                conn.execute("UPDATE topics SET last_seen=?, peak_rank=?, total_appearances=? WHERE platform=? AND title=?",
+                            (now, new_peak, new_count, platform_key, item['title']))
+            else:
+                conn.execute("INSERT INTO topics (platform,title,last_seen,peak_rank,total_appearances) VALUES (?,?,?,?,1)",
+                            (platform_key, item['title'], now, item['rank']))
 
 def clean_old_snapshots(days=7):
     cutoff = datetime.now() - timedelta(days=days)
@@ -385,9 +392,11 @@ with st.sidebar:
 
     st.divider()
     st.subheader("📊 视图模式")
-    view_mode = st.radio("切换视图", ["realtime","history"],
-                         labels=["⚡ 实时热搜","📈 历史趋势"],
-                         horizontal=True, index=0 if st.session_state.view_mode=="realtime" else 1)
+    view_mode = st.radio("切换视图",
+                         options=["realtime","history"],
+                         format_func=lambda x: "⚡ 实时热搜" if x=="realtime" else "📈 历史趋势",
+                         horizontal=True,
+                         index=0 if st.session_state.view_mode=="realtime" else 1)
     st.session_state.view_mode = view_mode
 
     st.divider()
