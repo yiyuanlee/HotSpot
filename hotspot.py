@@ -146,7 +146,7 @@ def parse_hot_value(hot_str):
 # 引擎
 # ================================================================
 def fetch_page_content(url, selector_to_wait=None, timeout=20):
-    if not PLAYWRIGHT_AVAILABLE:
+    def _fallback():
         try:
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
             if "weibo.com" in url:
@@ -158,23 +158,31 @@ def fetch_page_content(url, selector_to_wait=None, timeout=20):
             return None, f"HTTP {resp.status_code}"
         except Exception as e:
             return None, str(e)
+
+    if not PLAYWRIGHT_AVAILABLE:
+        return _fallback()
+        
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True, args=['--no-sandbox'])
-            page = browser.new_page(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                viewport={'width':1920,'height':1080})
             try:
+                page = browser.new_page(
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    viewport={'width':1920,'height':1080})
                 page.goto(url, wait_until="domcontentloaded", timeout=timeout*1000)
                 if selector_to_wait:
                     try: page.wait_for_selector(selector_to_wait, timeout=5000)
                     except: pass
                 else: page.wait_for_timeout(2000)
-                content = page.content(); browser.close()
-                return content,"OK"
-            except Exception as e:
-                browser.close(); return None,str(e)
-    except Exception: return None, traceback.format_exc()
+                content = page.content()
+                browser.close()
+                return content, "OK"
+            except Exception as inner_e:
+                browser.close()
+                return _fallback()
+    except Exception:
+        # This catches "Executable doesn't exist at..." when `install` wasn't run
+        return _fallback()
 
 def fetch_api_requests(url):
     try:
