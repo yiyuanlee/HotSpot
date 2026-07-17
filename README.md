@@ -1,50 +1,81 @@
-# 🔥 HotSpot v4.1 - 全网热搜聚合器
+# 🔥 HotSpot — 全网热搜 + 飞书每日 Digest
 
-HotSpot 是一个 **实时全网热搜聚合器**，使用 **Streamlit** 构建，支持微博、B站、抖音、小红书、知乎五大平台，并提供 **历史趋势分析**。
+抓取微博 / B站 / 抖音 / 小红书 / 知乎热搜，支持：
 
----
-
-## ✨ 功能特色
-
-### 实时热搜
-- 🔴 微博热搜 · 📺 B站热搜 · 🎵 抖音热榜 · 📕 小红书热搜 · 🔵 知乎热搜
-- 每条热搜显示**排名**、**热度值**、**抓取引擎标识**
-- 热度进度条直观展示热度对比
-- 排名前 3 名高亮标识
-
-### 历史趋势 📈（v4.0+ 新增）
-- 每次抓取自动存入本地 SQLite 数据库
-- 查看任意话题在任意平台的历史上榜轨迹
-- 热门话题排行榜（按上榜次数 / 巅峰排名排序）
-- 折线图展示话题排名变化趋势
-- 支持 1 / 3 / 7 / 14 天时间范围筛选
-
-### UI 体验（v4.0+ 优化）
-- 🌙 **深色模式**（侧边栏一键切换）
-- 四列卡片布局，每列独立圆角卡片 + 平台品牌色标题
-- 响应式设计，适配不同屏幕尺寸
-
-### 多引擎兜底
-- **视觉爬虫**（Playwright）优先，成功率更高
-- **API 请求**（requests）兜底，极速响应
-- 引擎标签：`Vis-PW` / `Vis-Hub` / `API`
+1. **Streamlit 看板**（原实时 + 历史趋势）
+2. **每日 9:00 Agent**（各平台 Top10 + AI 一句话摘要 → 推送飞书）
 
 ---
 
-## 🚀 快速开始
+## 🤖 飞书每日 Digest（推荐）
+
+每天北京时间 **09:00** 自动抓取各平台 Top10，生成一句 AI 摘要，发到飞书群。
+
+### 1. 配置飞书机器人
+
+1. 打开目标飞书群 → **设置** → **群机器人** → **添加自定义机器人**
+2. 复制 Webhook 地址（形如 `https://open.feishu.cn/open-apis/bot/v2/hook/...`）
+
+### 2. 本地试跑
 
 ```bash
 git clone https://github.com/yiyuanlee/HotSpot.git
 cd HotSpot
-pip install streamlit requests beautifulsoup4 matplotlib pandas
+pip install -r requirements.txt
+cp .env.example .env
+# 编辑 .env，填入 FEISHU_WEBHOOK_URL；可选填 OPENAI_API_KEY
+```
+
+```bash
+# 只打印卡片 JSON，不发送
+python digest_agent.py --dry-run
+
+# 真正推送到飞书
+python digest_agent.py
+```
+
+### 3. GitHub Actions 定时（每天 9:00）
+
+仓库已包含 `.github/workflows/daily-digest.yml`（UTC 01:00 = 北京时间 09:00）。
+
+在 GitHub 仓库 **Settings → Secrets and variables → Actions** 添加：
+
+| Secret | 必填 | 说明 |
+|--------|------|------|
+| `FEISHU_WEBHOOK_URL` | ✅ | 飞书机器人 Webhook |
+| `OPENAI_API_KEY` | 推荐 | 用于 AI 摘要；不填则用规则摘要 |
+| `OPENAI_BASE_URL` | 可选 | 默认 `https://api.openai.com/v1`，可换成 DeepSeek 等兼容地址 |
+| `OPENAI_MODEL` | 可选 | 默认 `gpt-4o-mini` |
+
+推送后可在 **Actions** 页手动点 **Run workflow** 立刻测一次。
+
+> 未配置 `OPENAI_API_KEY` 时仍会推送，摘要为基于各平台第 1 名的规则句子。
+
+### 环境变量一览
+
+见 [`.env.example`](.env.example)。
+
+---
+
+## 🖥️ Streamlit 看板（可选）
+
+```bash
+pip install -r requirements.txt
 streamlit run hotspot.py
 ```
 
-> Playwright 可选（支持视觉抓取）：
-> ```bash
-> pip install playwright
-> playwright install
-> ```
+Playwright 可选（提高视觉抓取成功率）：
+
+```bash
+pip install playwright
+playwright install
+```
+
+### 看板能力
+
+- 实时热搜：微博 / B站 / 抖音 / 小红书 / 知乎
+- 历史趋势：SQLite 快照、话题排行、折线图
+- 深色模式、多引擎兜底（Vis-PW / Vis-Hub / API）
 
 ---
 
@@ -52,62 +83,34 @@ streamlit run hotspot.py
 
 ```
 HotSpot/
-├── hotspot.py          # 主程序（v4.1）
-├── hotspot_history.db  # SQLite 历史数据库（运行后自动生成）
-├── README.md
-└── start.py            # 启动脚本
+├── digest_agent.py     # 飞书每日 Digest Agent（主入口）
+├── fetcher.py          # 各平台抓取逻辑（无 UI 依赖）
+├── hotspot.py          # Streamlit 看板
+├── hotspot_history.py  # 历史相关脚本
+├── requirements.txt
+├── .env.example
+└── .github/workflows/daily-digest.yml
 ```
-
----
-
-## 🖥️ 使用说明
-
-### 视图切换
-侧边栏提供两种视图：
-
-| 视图 | 说明 |
-|------|------|
-| ⚡ 实时热搜 | 当前各平台实时热搜榜 |
-| 📈 历史趋势 | 话题历史轨迹、热门话题排行、趋势折线图 |
-
-### 侧边栏功能
-- 🌙 深色模式开关
-- 📊 视图切换
-- 🔄 立即刷新（清空缓存重新抓取）
-- 📋 日志面板
-
-### 引擎标签
-| 标签 | 含义 |
-|------|------|
-| `Vis-PW` | Playwright 视觉爬虫 |
-| `Vis-Hub` | Tophub 视觉解析 |
-| `API` | API 请求直接抓取 |
-| `API-Mob` | 微博移动端 API |
 
 ---
 
 ## 🛠️ 技术栈
 
-- **Python 3.9+**
-- [Streamlit](https://streamlit.io/) — Web UI
-- [SQLite](https://docs.python.org/3/library/sqlite3.html) — 历史数据存储（Python 内置）
-- [Matplotlib](https://matplotlib.org/) — 趋势图绘制
-- [Pandas](https://pandas.pydata.org/) — 数据表格
-- [Playwright](https://playwright.dev/python/)（可选）
-- [BeautifulSoup4](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) — HTML 解析
-- [Requests](https://docs.python-requests.org/) — HTTP 请求
+- Python 3.9+
+- Requests + BeautifulSoup4 — 抓取
+- OpenAI 兼容 Chat Completions — AI 摘要
+- 飞书自定义机器人 Webhook — 消息推送
+- GitHub Actions — 定时调度
+- Streamlit / SQLite / Matplotlib — 可选看板
 
 ---
 
 ## ⚠️ 注意事项
 
-1. Windows 系统运行 Playwright 需设置：
-   ```python
-   import asyncio
-   asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-   ```
-2. 数据源来自各平台公开接口，部分平台可能存在访问限制
-3. 历史趋势数据需要运行一段时间后才会丰富（每小时自动快照）
+1. 数据源来自各平台公开页面/接口，可能偶发失败或限流
+2. 飞书 Webhook、API Key 请用 Secrets / `.env`，不要提交到仓库
+3. GitHub 免费仓库的 schedule 可能有数分钟延迟，属正常现象
+4. Windows 下若使用 Playwright，需 Proactor 事件循环策略（代码已处理）
 
 ---
 
@@ -115,6 +118,7 @@ HotSpot/
 
 | 版本 | 更新内容 |
 |------|----------|
+| v5.0 | 飞书每日 Digest Agent、AI 摘要、GitHub Actions 定时、抓取逻辑抽离 `fetcher.py` |
 | v4.1 | 历史趋势视图、SQLite 持久化、热门话题统计表、趋势折线图 |
 | v4.0 | 深色模式、卡片布局、热度进度条、排名徽章、知乎支持 |
 | v3.6 | 小红书热搜、Playwright 视觉爬虫 |
@@ -127,3 +131,4 @@ HotSpot/
 - 小红书搜索：https://www.xiaohongshu.com
 - B站搜索：https://search.bilibili.com
 - 抖音搜索：https://www.douyin.com
+- 飞书机器人文档：https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot
