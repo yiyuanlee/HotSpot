@@ -342,16 +342,37 @@ def _normalize_ranks(data: list[dict]) -> list[dict]:
     return out
 
 
-def fetch_all_hot(top_n: int = 10) -> dict[str, list[dict]]:
-    """抓取全部平台热搜，各取 Top N。"""
+def fetch_all_hot(top_n: int = 10, attempts: int = 3) -> dict[str, list[dict]]:
+    """
+    抓取全部平台热搜，各取 Top N。
+    单平台失败/空结果会重试，最终仍失败则记为空列表，不影响其他平台。
+    """
+    import time
+
     results: dict[str, list[dict]] = {}
     for key in PLATFORM_ORDER:
         fetcher = FETCHERS[key]
-        try:
-            items = _normalize_ranks(fetcher(top_n)[:top_n])
-            results[key] = items
-            logger.info("%s: %d 条", PLATFORM_NAMES[key], len(items))
-        except Exception as e:
-            logger.exception("抓取 %s 失败: %s", PLATFORM_NAMES[key], e)
-            results[key] = []
+        items: list[dict] = []
+        last_err: Exception | None = None
+        for i in range(1, max(1, attempts) + 1):
+            try:
+                items = _normalize_ranks(fetcher(top_n)[:top_n])
+                if items:
+                    break
+                logger.warning("%s 第 %d/%d 次返回空结果", PLATFORM_NAMES[key], i, attempts)
+            except Exception as e:
+                last_err = e
+                logger.warning(
+                    "%s 第 %d/%d 次失败: %s",
+                    PLATFORM_NAMES[key],
+                    i,
+                    attempts,
+                    e,
+                )
+            if i < attempts:
+                time.sleep(1.2 * i)
+        if not items and last_err is not None:
+            logger.error("%s 最终失败: %s", PLATFORM_NAMES[key], last_err)
+        results[key] = items
+        logger.info("%s: %d 条", PLATFORM_NAMES[key], len(items))
     return results

@@ -24,6 +24,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 tzdata
 
+      - name: Check required secrets
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          if [ -z "$FEISHU_WEBHOOK_URL" ]; then
+            echo "::error::缺少 Secret FEISHU_WEBHOOK_URL。"
+            echo "请到 Settings → Secrets and variables → Actions 添加飞书自定义机器人 Webhook。"
+            echo "可选：OPENAI_API_KEY / OPENAI_BASE_URL / OPENAI_MODEL"
+            exit 2
+          fi
+          echo "FEISHU_WEBHOOK_URL 已配置"
+
       - name: Send Feishu digest
         env:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
@@ -31,4 +43,5 @@ jobs:
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           DIGEST_TOP_N: "10"
+          DIGEST_MIN_OK_PLATFORMS: "1"
         run: python digest_agent.py
